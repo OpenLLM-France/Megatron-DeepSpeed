@@ -554,7 +554,7 @@ class _NullTokenizer:
 class _AutoTokenizer(AbstractTokenizer):
     """AutoTokenizer for Hf Pretrained model loading."""
 
-    def __init__(self, tokenizer_name_or_path, vocab_extra_ids):
+    def __init__(self, tokenizer_name_or_path, vocab_extra_ids, add_eos_token=True):
         from transformers import AutoTokenizer
         name = tokenizer_name_or_path
         super().__init__(name)
@@ -565,6 +565,9 @@ class _AutoTokenizer(AbstractTokenizer):
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **hf_tokenizer_kwargs)
         self.encoder = self.tokenizer.get_vocab()
         self.decoder = {v: k for k, v in self.encoder.items()}
+        self.tokenizer.add_eos_token = add_eos_token
+        if add_eos_token:
+            assert self.tokenizer.eos_token_id is not None
 
     @property
     def vocab_size(self):
@@ -592,9 +595,9 @@ class _AutoTokenizer(AbstractTokenizer):
             for i in range(0, len(text), CHUNK_MAX):
                 tokens += self.tokenizer.encode(text[i:i+CHUNK_MAX], add_special_tokens=False)
             # add special tokens to beginning and end
-            if self.tokenizer.bos_token:
+            if self.tokenizer.bos_token_id is not None:
                 tokens = [self.tokenizer.bos_token_id] + tokens
-            if self.tokenizer.eos_token_id and self.tokenizer.add_eos_token:
+            if self.tokenizer.add_eos_token:
                 tokens = tokens + [self.tokenizer.eos_token_id]
             return tokens
         else:
