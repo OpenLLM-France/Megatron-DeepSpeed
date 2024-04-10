@@ -542,9 +542,11 @@ def _build_doc_idx(documents, num_epochs, np_rng, separate_last_epoch):
     if not separate_last_epoch or num_epochs == 1:
         doc_idx = np.mgrid[0:num_epochs, 0:len(documents)][1]
         doc_idx[:] = documents
+        # Shuffle epoch by epoch
+        for i in range(num_epochs):
+            np_rng.shuffle(doc_idx[i])
         doc_idx = doc_idx.reshape(-1)
         doc_idx = doc_idx.astype(np.int32)
-        np_rng.shuffle(doc_idx)
         return doc_idx
 
     doc_idx_first = _build_doc_idx(documents, num_epochs-1, np_rng, False)
