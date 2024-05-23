@@ -66,7 +66,7 @@ def initialize_megatron(extra_args_provider=None, args_defaults={},
     # tensorboard-writer, and timers.
     set_global_variables(args)
     writer = get_tensorboard_writer()
-  
+    
     # torch.distributed initialization
     def finish_mpu_init():
         args = get_args()
