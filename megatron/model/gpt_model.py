@@ -334,11 +334,16 @@ class GPTModelPipe(PipelineModule,MegatronModule):
                                              num_mp=mpu.get_tensor_model_parallel_world_size(),
                                              num_dp=mpu.get_data_parallel_world_size())
 
+        if args.pp_partition_method is not None:
+            partition_method = args.pp_partition_method
+        else:
+            partition_method = 'type:transformer'
+
         super().__init__(layers=self.specs,
                          loss_fn=CrossEntropy,
                          topology=topo,
                          activation_checkpoint_interval=interval,
-                         partition_method='type:transformer')
+                         partition_method=partition_method)
 
     def universal_checkpoint_info(self):
         info = dict()

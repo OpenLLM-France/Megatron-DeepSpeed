@@ -953,6 +953,8 @@ def _add_training_args(parser):
                        dest='gradient_accumulation_fusion')
     group.add_argument('--use-dataset-only', type=bool, required=False, default=False,
                        help='If set to True, only use the megatron dataset for external trainer ')
+    group.add_argument('--pp-partition-method', type=str, default=None,
+                    help="Use to override the pipeline stages partitioning method. e.g., 'type:transformer|embedding'")
     return parser
 
 
