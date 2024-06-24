@@ -30,7 +30,7 @@ def main():
         exit(1)
 
     print(f'loading checkpoint file: {ckpt_file}')
-    sd = torch.load(ckpt_file)
+    sd = torch.load(ckpt_file, map_location=torch.device('cpu'))
     dump_data(sd)
 
     quit()

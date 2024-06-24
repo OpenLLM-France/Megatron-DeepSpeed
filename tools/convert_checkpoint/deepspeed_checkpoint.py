@@ -2,7 +2,7 @@ import os
 from typing import Dict
 import torch 
 
-ZERO_FILE_PREFIX = 'zero_pp_rank_'
+ZERO_FILE_PREFIX = 'bf16_zero_pp_rank_'
 LAYER_FILE_PREFIX = 'layer_'
 MP_RANK_FILE_PREFIX = 'mp_rank_'
 EMBEDDING_LAYER_INDEX = 0
