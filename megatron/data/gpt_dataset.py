@@ -345,6 +345,9 @@ def _build_index_mappings(name, data_prefix, documents, sizes,
     # rng state
     np_rng = np.random.RandomState(seed=seed)
 
+    # Format option to have a stable hash
+    splits_string = splits_string.replace(" ", "")
+
     # Filename of the index mappings.
     desc = "GPT Dataset\n\n"
     desc += f"Data prefix {os.path.basename(data_prefix)}\n"
