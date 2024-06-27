@@ -75,11 +75,9 @@ def convert_megatron_checkpoint(input_state_dict, config):
     # The model.
     model = input_state_dict["model"]
     lm = model["language_model"]
-    dtype = torch.bfloat16
 
-    # The word embeddings.
-    word_embeddings = lm["embedding"]["word_embeddings"]["weight"][: config.vocab_size, :]
-    output_state_dict["model.embed_tokens.weight"] = word_embeddings.to(dtype).clone().detach().contiguous()
+    # Word embeddings.
+    output_state_dict["model.embed_tokens.weight"] = lm["embedding"]["word_embeddings"]["weight"][: config.vocab_size, :]
 
     # The transformer.
     transformer = lm["transformer"] if "transformer" in lm.keys() else lm["encoder"]
@@ -159,7 +157,7 @@ def convert_megatron_checkpoint(input_state_dict, config):
     assert config.num_hidden_layers == layer_idx + 1
 
     # The final layernorm
-    output_state_dict["model.norm.weight"] = transformer[f"layers.{layer_idx + 1}.weight"].to(dtype) 
-    output_state_dict["lm_head.weight"] = transformer["final_layernorm.lm_head.weight"].to(dtype) 
+    output_state_dict["model.norm.weight"] = transformer[f"layers.{layer_idx + 1}.weight"]
+    output_state_dict["lm_head.weight"] = transformer["final_layernorm.lm_head.weight"]
 
     return output_state_dict
