@@ -121,7 +121,7 @@ def convert_megatron_checkpoint(input_state_dict, config):
             output_state_dict[layer_name + ".self_attn.q_proj.weight"] = q_proj
             output_state_dict[layer_name + ".self_attn.k_proj.weight"] = k_proj
             output_state_dict[layer_name + ".self_attn.v_proj.weight"] = v_proj
-
+        # QKV matrix - GQA 
         elif (
             op_name == "self_attention.query"
         ):
