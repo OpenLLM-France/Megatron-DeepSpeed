@@ -63,6 +63,7 @@ def convert_megatron_checkpoint(input_state_dict, config):
 
     # The number of heads.
     heads = config.num_attention_heads
+    kv_heads = config.num_key_value_heads 
     # The hidden_size per head.
     hidden_size_per_head = config.hidden_size // config.num_attention_heads
     # Megatron-LM checkpoint version
@@ -126,12 +127,16 @@ def convert_megatron_checkpoint(input_state_dict, config):
         elif (
             op_name == "self_attention.query"
         ):
-            raise(NotImplementedError)
+            q_proj = fix_query_key_value_ordering(val, checkpoint_version, 1, heads, hidden_size_per_head)
+            output_state_dict[layer_name + ".self_attn.q_proj.weight"] = q_proj
 
         elif (
             op_name == "self_attention.key_value"
         ):
-            raise(NotImplementedError)
+            val = fix_query_key_value_ordering(val, checkpoint_version, 2, kv_heads, hidden_size_per_head)
+            k_proj, v_proj = val.chunk(2, dim=0)
+            output_state_dict[layer_name + ".self_attn.k_proj.weight"] = k_proj
+            output_state_dict[layer_name + ".self_attn.v_proj.weight"] = v_proj
          
         elif op_name == "self_attention.dense":
             output_state_dict[layer_name + ".self_attn.o_proj.weight"] = val
