@@ -67,7 +67,7 @@ def get_datasets_weights_and_num_samples(data_prefix,
         datasets_train_valid_test_num_samples = []
         for weight in weights:
             datasets_train_valid_test_num_samples.append(
-                [int(math.ceil(val * weight * 1.005))
+                    [max(int(math.ceil(val * weight * 1.005)), 1) if val>0 else 0
                 for val in train_valid_test_num_samples])
     else:
         # Used when separate dataset files are provided for train,
@@ -645,6 +645,23 @@ def get_train_valid_test_split_(splits_string, size):
     for index, split in enumerate(splits):
         splits_index.append(splits_index[index] +
                             int(round(split * float(size))))
+
+
+    if splits[1] > 0 and splits_index[2] - splits_index[1] < 1:
+        if splits_index[1] > 1:
+            splits_index[1] -= 1
+            splits_index[2] = splits_index[1] + 1
+
+    if splits[2] > 0 and splits_index[3] - splits_index[2] < 1:
+        if splits_index[2] - splits_index[1] > 1:
+            splits_index[2] -= 1
+            splits_index[3] = splits_index[2] + 1
+        else:
+            if splits_index[1] > 1:
+                splits_index[1] -= 1
+                splits_index[2] -= 1
+                splits_index[3] = splits_index[2] + 1
+
     diff = splits_index[-1] - size
     for index in range(1, len(splits_index)):
         splits_index[index] -= diff

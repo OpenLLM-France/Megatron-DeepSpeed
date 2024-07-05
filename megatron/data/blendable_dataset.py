@@ -20,6 +20,8 @@ class BlendableDataset(torch.utils.data.Dataset):
 
         self.datasets = datasets
         num_datasets = len(datasets)
+        print_rank_0(f'-----HEREEEEEEEE:\n num_datasets:{num_datasets} | len weights: {len(weights)}')
+        print_rank_0(f"weights:\n {weights}")
         assert num_datasets == len(weights)
 
         self.size = size
