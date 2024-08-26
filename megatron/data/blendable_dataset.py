@@ -11,6 +11,9 @@ import torch
 
 from megatron import print_rank_0
 from megatron.core import mpu
+from deepspeed.accelerator import get_accelerator
+
+import re
 
 class BlendableDataset(torch.utils.data.Dataset):
 
@@ -30,11 +33,15 @@ class BlendableDataset(torch.utils.data.Dataset):
         assert sum_weights > 0.0
         weights /= sum_weights
 
-        # Build indicies.
+        # Build indices.
         def _build_indices():
             start_time = time.time()
-            assert num_datasets < 255
-            dataset_index = np.zeros(self.size, dtype=np.uint8)
+            # see https://github.com/microsoft/Megatron-DeepSpeed/issues/377
+            if num_datasets < 255:
+                dataset_index = np.zeros(self.size, dtype=np.uint8)
+            else:
+                raise NotImplementedError('Number of datasets is too large (would require to recompile cpp helpers)')
+                dataset_index = np.zeros(self.size, dtype=np.int64)
             dataset_sample_index = np.zeros(self.size, dtype=np.int64)
 
             from megatron.data import helpers
@@ -64,6 +71,29 @@ class BlendableDataset(torch.utils.data.Dataset):
                 print(' > WARNING: could not find index map files for blendable'
                       ' dataset, building indices on rank 0 ...', flush=True)
                 dataset_index, dataset_sample_index = _build_indices()
+
+                # Sort by year, for each dataset where it makes sense
+                prefixes = [desc_to_name(dataset.desc) for dataset in datasets]
+                groups, groups_meta = group_prefixes(prefixes)
+                assert len(groups) == len(groups_meta)
+                if len(groups):
+                    print("Re-ordering those datasets by year:")
+                    for group, meta in zip(groups, groups_meta):
+                        assert len(group) == len(meta)
+                        for i, (year, prefix) in zip(group, meta):
+                            print(f"  {i} ({year}) -- {prefix}")
+                        print()
+                    enforce_groups_order(groups, dataset_index, dataset_sample_index)
+
+                # Some verbose added (to check number of samples per dataset)
+                num_samples_per_dataset = np.bincount(dataset_index)
+                assert len(num_samples_per_dataset) == len(datasets)
+                counts = {}
+                for dataset, num_samples in zip(datasets, num_samples_per_dataset):
+                    counts[desc_to_name(dataset.desc)] = num_samples
+                for k in sorted(counts):
+                    print(f'> dataset {k} -> {counts[k]} samples')
+
                 try:
                     os.makedirs(os.path.dirname(index_path), exist_ok=True)
                     with open(desc_path, 'wt') as fd:
@@ -78,8 +108,7 @@ class BlendableDataset(torch.utils.data.Dataset):
                     print('write access to.')
                     cache_success = False
 
-
-            counts = torch.cuda.LongTensor([cache_success])
+            counts = get_accelerator().LongTensor([cache_success])
             torch.distributed.all_reduce(counts, group=mpu.get_data_parallel_group())
             torch.distributed.all_reduce(counts, group=mpu.get_pipeline_model_parallel_group())
             if counts[0].item() != (
@@ -123,3 +152,104 @@ class BlendableDataset(torch.utils.data.Dataset):
             "dataset_idx" : dataset_idx,
             **self.datasets[dataset_idx][sample_idx],
         }
+
+# Helpers added for Training Curriculum
+
+def desc_to_name(desc):
+    assert "Data prefix " in desc, desc
+    return desc.split("Data prefix ")[1].split("\n")[0]
+
+
+def get_year(prefix):
+    year = re.search(r"\d{4}", prefix)
+    if year:
+        year = year.group()
+        name = re.sub(year, "XXXX", prefix)
+    else:
+        year = None
+        name = prefix
+    return name, year
+
+
+def group_prefixes(prefixes):
+    groups = {}
+    for i, prefix in enumerate(prefixes):
+        name, year = get_year(prefix)
+        if year:
+            if name not in groups:
+                groups[name] = []
+            groups[name].append((i, (year, prefix)))
+    # Sort by year
+    for name, group in groups.items():
+        groups[name] = sorted(group, key=lambda x: x[1])
+    groups_indices = [[g[0] for g in group] for group in groups.values() if len(group) > 1]
+    groups_meta = [[g[1] for g in group] for group in groups.values() if len(group) > 1]
+    return groups_indices, groups_meta
+
+
+def enforce_groups_order(groups, dataset_index, dataset_sample_index):
+     for group in groups:
+        enforce_group_order(group, dataset_index, dataset_sample_index)
+
+
+def enforce_group_order(group, dataset_index, dataset_sample_index=None):
+    """
+    Re-order the integers in an array to ensure that some of them appear in a given order.
+
+    Args:
+        group: list
+            A list of integers, which we want to appear in given order in "dataset_index"
+        dataset_index: np.array
+            An array of integers
+        dataset_sample_index: np.array
+            An array of integers, which we want to reorder accordingly.
+            Caution : some assumptions are made here (for a given dataset, samples will remain in crescent order)
+    """
+
+    # First find the indices corresponding to each integer in the list
+    all_indices = []
+    for dataset_idx in group:
+        all_indices.append(
+            np.where(dataset_index == dataset_idx)[0]
+        )
+    for i, (dataset_idx, indices) in enumerate(zip(group, all_indices)):
+        other_indices = [all_indices[j] for j in range(i+1, len(all_indices))]
+        reorder = True
+        if not other_indices:
+            reorder = False
+        else:
+            other_indices = np.concatenate(other_indices)
+            if not other_indices.size:
+                reorder = False
+            else:
+                other_indices = np.sort(other_indices)
+
+        if reorder:
+            min_indice_other, i_min_indice_other = other_indices[0], 0
+
+            max_indice, i_max_indice = indices[-1], len(indices) - 1
+
+            while max_indice > min_indice_other:
+                # Swap the two indices
+                dataset_index[max_indice], dataset_index[min_indice_other] = dataset_index[min_indice_other], dataset_index[max_indice]
+                if dataset_sample_index is not None:
+                    dataset_sample_index[max_indice], dataset_sample_index[min_indice_other] = dataset_sample_index[min_indice_other], dataset_sample_index[max_indice]
+
+                # Update
+                i_min_indice_other += 1
+                if i_min_indice_other >= len(other_indices):
+                    break
+                min_indice_other = other_indices[i_min_indice_other]
+                i_max_indice -= 1
+                if i_max_indice < 0:
+                    break
+                max_indice = indices[i_max_indice]
+
+            # Update the other indices
+            for j, idx in enumerate(group[i+1:]):
+                all_indices[i+j+1] = np.where(dataset_index == idx)[0]
+
+        if dataset_sample_index is not None:
+            # Re-order
+            indices = np.where(dataset_index == dataset_idx)[0]
+            dataset_sample_index[indices] = np.sort(dataset_sample_index[indices])
