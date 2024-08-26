@@ -613,8 +613,8 @@ def get_indexed_dataset_(data_prefix, data_impl, skip_warmup):
                                            data_impl,
                                            skip_warmup)
     assert indexed_dataset.sizes.shape[0] == indexed_dataset.doc_idx[-1]
-    print_rank_0(' > finished creating indexed dataset in {:4f} '
-                 'seconds'.format(time.time() - start_time))
+    print_rank_0(' > finished creating indexed dataset for {} in {:4f} '
+                 'seconds'.format(data_prefix, time.time() - start_time))
 
     print_rank_0(' > indexed dataset stats:')
     print_rank_0('    number of documents: {}'.format(

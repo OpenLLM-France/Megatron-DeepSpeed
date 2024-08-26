@@ -247,8 +247,8 @@ def get_indexed_dataset_(data_prefix, data_impl, skip_warmup):
     indexed_dataset = make_indexed_dataset(data_prefix,
                                            data_impl,
                                            skip_warmup)
-    print_rank_0(' > finished creating indexed dataset in {:4f} '
-                 'seconds'.format(time.time() - start_time))
+    print_rank_0(' > finished creating indexed dataset for {} in {:4f} '
+                 'seconds'.format(os.path.basename(data_prefix), time.time() - start_time))
     print_rank_0('    number of documents: {}'.format(
         indexed_dataset.sizes.shape[0]))
 
@@ -466,8 +466,8 @@ def _build_index_mappings(name, data_prefix, documents, sizes,
             sample_idx = helpers.build_sample_idx(sizes, doc_idx, seq_length,
                                                   num_epochs, tokens_per_epoch)
             np.save(idx_path['sample'], sample_idx, allow_pickle=True)
-            print_rank_0(' > elasped time to build and save sample-idx mapping '
-                         '(seconds): {:4f}'.format(time.time() - start_time))
+            print_rank_0(' > elasped time to build and save sample-idx mapping for {} '
+                         '(seconds): {:4f}'.format(os.path.basename(data_prefix), time.time() - start_time))
             # shuffle-idx.
             start_time = time.time()
             # -1 is due to data structure used to retieve the index:
