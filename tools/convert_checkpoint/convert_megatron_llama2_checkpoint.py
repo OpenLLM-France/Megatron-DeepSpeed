@@ -150,8 +150,7 @@ def convert_megatron_checkpoint(input_state_dict, config):
         else:
             raise(NotImplementedError)
 
-        rope_theta = 10000
-        inv_freq = 1.0 / (rope_theta ** (torch.arange(0, hidden_size_per_head, 2).float() / hidden_size_per_head))
+        inv_freq = 1.0 / (config.rope_theta ** (torch.arange(0, hidden_size_per_head, 2).float() / hidden_size_per_head))
         output_state_dict[layer_name + '.self_attn.rotary_emb.inv_freq'] = inv_freq
 
     assert config.num_hidden_layers == layer_idx + 1
