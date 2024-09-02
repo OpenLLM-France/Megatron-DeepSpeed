@@ -80,7 +80,7 @@ def convert_megatron_checkpoint(input_state_dict, config):
     output_state_dict["model.embed_tokens.weight"] = lm["embedding"]["word_embeddings"]["weight"][: config.vocab_size, :]
 
     # The transformer.
-    transformer = lm["transformer"] if "transformer" in lm.keys() else lm["encoder"]
+    transformer = lm["encoder"]
 
     # The regex to extract layer names.
     layer_re = re.compile(r"layers\.(\d+)\.([a-z0-9_.]+)\.([a-z]+)")
@@ -156,7 +156,6 @@ def convert_megatron_checkpoint(input_state_dict, config):
     assert config.num_hidden_layers == layer_idx + 1
 
     # The final layernorm
-    output_state_dict["model.norm.weight"] = transformer[f"layers.{layer_idx + 1}.weight"]
-    output_state_dict["lm_head.weight"] = transformer["final_layernorm.lm_head.weight"]
-
+    output_state_dict["model.norm.weight"] = transformer["final_layernorm.weight"]
+    output_state_dict["lm_head.weight"] = lm["lm_head"]["lm_head.weight"]
     return output_state_dict

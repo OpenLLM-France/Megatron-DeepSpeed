@@ -7,11 +7,10 @@ from collections import OrderedDict
 from deepspeed_checkpoint import ARGS_KEY, DeepSpeedCheckpoint
 
 MODEL_KEY = 'model'
-ARGS_KEY = 'args'
 LANGUGAGE_MODEL_KEY = 'language_model'
 EMBEDDING_KEY = 'embedding'
 ENCODER_KEY = 'encoder'
-WORD_EMBEDDINGS_FOR_HEAD_KEY = 'word_embeddings_for_head'
+WORD_EMBEDDINGS_FOR_HEAD_KEY = 'lm_head'
 WORD_EMBEDDINGS_KEY = 'word_embeddings'
 FINAL_LAYER_NORM_KEY ='final_layernorm'
 CHECKPOINT_VERSION_KEY = 'checkpoint_version'
@@ -81,7 +80,7 @@ def _renest_sd(sd):
 def _create_rank_checkpoint(ds_checkpoint, tp_index, pp_index, for_release=False):
     meg_encoder_sd = OrderedDict()
     meg_embedding_sd = OrderedDict()
-    meg_embedding_for_head_sd = OrderedDict()
+    meg_lm_head_sd = OrderedDict()
 
     transformer_sd = ds_checkpoint.get_transformer_state(tp_index, pp_index)
     meg_encoder_sd.update(_convert_ds_transformer_state(transformer_sd))
@@ -92,13 +91,10 @@ def _create_rank_checkpoint(ds_checkpoint, tp_index, pp_index, for_release=False
         if pp_index == 0:
             meg_embedding_sd.update(nested_embedding_sd)
 
+        lm_head_sd = ds_checkpoint.get_lm_head_state(tp_index)
+        # nested_lm_head_sd = _renest_sd(lm_head_sd)
         if pp_index == ds_checkpoint.pp_degree -1:
-            for key, value in embedding_sd.items():
-                if key.startswith(WORD_EMBEDDINGS_KEY):
-                    fields = key.split('.')
-                    new_fields = fields[1:]
-                    new_key = '.'.join(new_fields)
-                    meg_embedding_for_head_sd[new_key] = value
+            meg_lm_head_sd.update(lm_head_sd)
 
             final_norm_sd = ds_checkpoint.get_final_norm_state(tp_index)
             new_final_norm_sd = {f'{FINAL_LAYER_NORM_KEY}.{key}': value for key, value in final_norm_sd.items()}
@@ -112,7 +108,7 @@ def _create_rank_checkpoint(ds_checkpoint, tp_index, pp_index, for_release=False
         checkpoint_sd[MODEL_KEY][LANGUGAGE_MODEL_KEY][EMBEDDING_KEY] = meg_embedding_sd
     checkpoint_sd[MODEL_KEY][LANGUGAGE_MODEL_KEY][ENCODER_KEY] = meg_encoder_sd
     if pp_index == ds_checkpoint.pp_degree -1:
-        checkpoint_sd[MODEL_KEY][WORD_EMBEDDINGS_FOR_HEAD_KEY] = meg_embedding_for_head_sd
+        checkpoint_sd[MODEL_KEY][LANGUGAGE_MODEL_KEY][WORD_EMBEDDINGS_FOR_HEAD_KEY] = meg_lm_head_sd
 
     checkpoint_sd[ARGS_KEY] = ds_checkpoint.get_args()
     # Adjust specific fields

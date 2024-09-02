@@ -23,6 +23,10 @@ def main():
     iteration = ds_checkpoint.get_iteration()
     input_state_dict = _create_rank_checkpoint(ds_checkpoint, 0, 0, args.for_release)
 
+    print('\n>>> input_state_dict\n\n')
+    recursive_print(None, input_state_dict)
+    print('\n\n\n')
+
     megatron_args = input_state_dict['args']
 
     # the 2nd part comes from transformers.models.megatron_gpt2.convert_megatron_gpt2_checkpoint.main
@@ -47,8 +51,6 @@ def main():
         vocab_size=65024,
         torch_dtype='float16',
     )
-
-    # recursive_print(None, input_state_dict)
 
     # Convert.
     print("Converting to HF Checkpoint")
