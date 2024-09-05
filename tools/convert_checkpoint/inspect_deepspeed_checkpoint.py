@@ -35,6 +35,7 @@ def show_mappings(ds_checkpoint):
     ds_checkpoint.show_transformer_file_map()
     ds_checkpoint.show_tp_embedding_map()
     ds_checkpoint.show_tp_final_norm_map()
+    ds_checkpoint.show_tp_lm_head_map()
 
 def show_state_summary(tag, sd):
     summary = {k:v.shape for k,v in sd.items()}
@@ -49,6 +50,11 @@ def show_final_norm_states(ds_checkpoint):
     for i in range(0, ds_checkpoint.tp_degree):
         sd = ds_checkpoint.get_final_norm_state(i)
         show_state_summary(f'final_norm[{i}]', sd)
+
+def show_lm_head_states(ds_checkpoint):
+    for i in range(0, ds_checkpoint.tp_degree):
+        sd = ds_checkpoint.get_lm_head_state(i)
+        show_state_summary(f'lm_head[{i}]', sd)
 
 def show_transformer_states(ds_checkpoint):
     for i in range(0, ds_checkpoint.tp_degree):
@@ -72,6 +78,7 @@ def main():
     show_mappings(ds_checkpoint)
     show_embedding_states(ds_checkpoint)
     show_final_norm_states(ds_checkpoint)
+    show_lm_head_states(ds_checkpoint)
     show_transformer_states(ds_checkpoint)
     checkpoint_args = ds_checkpoint.get_args()
     print(f'checkpoint args = {checkpoint_args}')
