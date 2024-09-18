@@ -9,6 +9,16 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_folder', default=None, type=str, help='Input Universal Checkpoint folder')
     parser.add_argument('--output_folder', default=None, type=str, help='Output HF checkpoint folder')
+    parser.add_argument(
+        "--max_shard_size",
+        type=str,
+        default="10GB",
+        help=(
+            "The maximum size for a checkpoint before being sharded. Checkpoints shard will then be each of size "
+            "lower than this size. If expressed as a string, needs to be digits followed by a unit (like `5MB`). "
+            "Only used when converting a Megatron checkpoint to a Transformers checkpoint."
+        ),
+    )
     args = parser.parse_args()
     print(f'args = {args}')
     return args
@@ -118,11 +128,10 @@ def main():
         inv_freq = 1.0 / (config.rope_theta ** (torch.arange(0, hidden_size_per_head, 2).float() / hidden_size_per_head))
         output_state_dict[f"model.layers.{l}.self_attn.rotary_emb.inv_freq"] = inv_freq
 
-    basename = args.output_folder
-    os.makedirs(basename, exist_ok=True)
+    os.makedirs(args.output_folder, exist_ok=True)
 
     # Store the config to file.
-    output_config_file = os.path.join(basename, "config.json")
+    output_config_file = os.path.join(args.output_folder, "config.json")
     output_config = config.to_dict()
     output_config["architectures"] = ["LlamaForCausalLM"]
     output_config["model_type"] = "llama"
@@ -131,7 +140,7 @@ def main():
         json.dump(output_config, f)
 
     # Store the state_dict to file.
-    # output_checkpoint_file = os.path.join(basename, "pytorch_model.bin")
+    # output_checkpoint_file = os.path.join(args.output_folder, "pytorch_model.bin")
     # print(f'Saving checkpoint to "{output_checkpoint_file}"')
     # torch.save(output_state_dict, output_checkpoint_file)
 
@@ -141,12 +150,12 @@ def main():
 
     # Save the model
     for shard_file, shard in shards.items():
-        torch.save(shard, os.path.join(args.save_path, shard_file))
+        torch.save(shard, os.path.join(args.output_folder, shard_file))
 
     if index is None:
-        print(f"Model weights saved in {os.path.join(args.save_path, WEIGHTS_NAME)}")
+        print(f"Model weights saved in {os.path.join(args.output_folder, WEIGHTS_NAME)}")
     else:
-        save_index_file = os.path.join(args.save_path, WEIGHTS_INDEX_NAME)
+        save_index_file = os.path.join(args.output_folder, WEIGHTS_INDEX_NAME)
         # Save the index as well
         with open(save_index_file, "w", encoding="utf-8") as f:
             content = json.dumps(index, indent=2, sort_keys=True) + "\n"
