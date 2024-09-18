@@ -3,6 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaConfig
 import os
 import torch
 import json
+from transformers.modeling_utils import WEIGHTS_INDEX_NAME, WEIGHTS_NAME, shard_checkpoint
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -59,7 +60,7 @@ def main():
         tie_word_embeddings=False,
         use_cache=True,
         vocab_size=65024,
-        torch_dtype='float16',
+        torch_dtype='bfloat16',
     )
 
     num_layers = config.num_hidden_layers
@@ -130,9 +131,31 @@ def main():
         json.dump(output_config, f)
 
     # Store the state_dict to file.
-    output_checkpoint_file = os.path.join(basename, "pytorch_model.bin")
-    print(f'Saving checkpoint to "{output_checkpoint_file}"')
-    torch.save(output_state_dict, output_checkpoint_file)
+    # output_checkpoint_file = os.path.join(basename, "pytorch_model.bin")
+    # print(f'Saving checkpoint to "{output_checkpoint_file}"')
+    # torch.save(output_state_dict, output_checkpoint_file)
+
+    # Store the state_dict to file.
+    max_shard_size = int(args.max_shard_size) if args.max_shard_size.isdigit() else args.max_shard_size
+    shards, index = shard_checkpoint(output_state_dict, max_shard_size=max_shard_size)
+
+    # Save the model
+    for shard_file, shard in shards.items():
+        torch.save(shard, os.path.join(args.save_path, shard_file))
+
+    if index is None:
+        print(f"Model weights saved in {os.path.join(args.save_path, WEIGHTS_NAME)}")
+    else:
+        save_index_file = os.path.join(args.save_path, WEIGHTS_INDEX_NAME)
+        # Save the index as well
+        with open(save_index_file, "w", encoding="utf-8") as f:
+            content = json.dumps(index, indent=2, sort_keys=True) + "\n"
+            f.write(content)
+        print(
+            f"The model is bigger than the maximum size per checkpoint ({args.max_shard_size}) and is going to be "
+            f"split in {len(shards)} checkpoint shards. You can find where each parameters has been saved in the "
+            f"index located at {save_index_file}."
+        )
 
     print("Now add tokenizer files and upload to the hub")
 
