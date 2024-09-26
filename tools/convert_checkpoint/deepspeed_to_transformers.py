@@ -49,7 +49,7 @@ def main():
         tie_word_embeddings=False,
         use_cache=True,
         vocab_size=65024,
-        torch_dtype='float16',
+        torch_dtype='bfloat16',
     )
 
     # Convert.
@@ -58,9 +58,6 @@ def main():
 
     basename = args.output_folder
     os.makedirs(basename, exist_ok=True)
-
-    # Print the structure of converted state dict.
-    # recursive_print(None, output_state_dict)
 
     # Store the config to file.
     output_config_file = os.path.join(basename, "config.json")
@@ -75,6 +72,9 @@ def main():
     output_checkpoint_file = os.path.join(basename, "pytorch_model.bin")
     print(f'Saving checkpoint to "{output_checkpoint_file}"')
     torch.save(output_state_dict, output_checkpoint_file)
+
+    # print("Save rotary emb for debugging")
+    # torch.save(megatron_args.rotary_pos_emb, os.path.join(basename, "rotary_embedding.pt"))
 
     print("Now add tokenizer files and upload to the hub")
 

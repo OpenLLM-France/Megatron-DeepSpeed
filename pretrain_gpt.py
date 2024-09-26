@@ -23,6 +23,9 @@ import deepspeed
 from deepspeed.runtime.utils import see_memory_usage
 from deepspeed.accelerator.real_accelerator import get_accelerator
 import os
+# For H100:
+# os.environ['TORCH_CUDA_ARCH_LIST'] = "9.0+PTX"
+
 import subprocess
 
 from torch import nn

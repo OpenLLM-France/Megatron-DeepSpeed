@@ -38,19 +38,7 @@ import torch
 
 from megatron.arguments import core_transformer_config_from_args
 from megatron import get_args
-
-def model_provider(pre_process=True, post_process=True):
-    """Build the model."""
-
-    args = get_args()
-    config = core_transformer_config_from_args(args)
-
-    print_rank_0('building GPT model ...')
-    model = GPTModel(config=config, num_tokentypes=0, parallel_output=False,
-                     pre_process=pre_process, post_process=post_process,
-                     return_moe_loss=False) # we need to set "return_moe_loss" for the inference_mode
-    return model
-
+from pretrain_gpt import model_provider
 
 def add_text_generate_args(parser):
     """Text generation arguments."""
@@ -79,8 +67,8 @@ def add_text_generate_args(parser):
     group.add_argument("--recompute", action='store_true',
                        help='During generation recompute all attention '
                        'instead of using previously computed keys/values.')
-    group.add_argument("--local_rank", type=int, default=0,
-                       help='local_rank')
+    # group.add_argument("--local_rank", type=int, default=0,
+    #                    help='local_rank')
 
     return parser
 
@@ -117,10 +105,7 @@ def main():
     model_latencies = []
     single_token_latency = []
 
-    initialize_megatron(extra_args_provider=add_text_generate_args,
-                        args_defaults={'tokenizer_type': 'GPT2BPETokenizer',
-                                       'no_load_rng': True,
-                                       'no_load_optim': True})
+    initialize_megatron(extra_args_provider=add_text_generate_args, args_defaults={'no_load_rng': True,'no_load_optim': True})
 
     args = get_args()
 

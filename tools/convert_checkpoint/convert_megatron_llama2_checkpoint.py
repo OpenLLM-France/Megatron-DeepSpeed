@@ -61,6 +61,9 @@ def convert_megatron_checkpoint(input_state_dict, config):
     # The converted output model.
     output_state_dict = {}
 
+    # Rope theta
+    rope_theta = config.rope_theta
+    # print(f'rope_theta = {rope_theta}')
     # The number of heads.
     heads = config.num_attention_heads
     kv_heads = config.num_key_value_heads 
@@ -76,9 +79,6 @@ def convert_megatron_checkpoint(input_state_dict, config):
     model = input_state_dict["model"]
     lm = model["language_model"]
 
-    # Word embeddings.
-    output_state_dict["model.embed_tokens.weight"] = lm["embedding"]["word_embeddings"]["weight"][: config.vocab_size, :]
-
     # The transformer.
     transformer = lm["encoder"]
 
@@ -92,7 +92,6 @@ def convert_megatron_checkpoint(input_state_dict, config):
 
         # Stop if that's not a layer
         if m is None:
-            print(f"Not a layer: {key}")
             break
 
         # The index of the layer.
@@ -150,12 +149,16 @@ def convert_megatron_checkpoint(input_state_dict, config):
         else:
             raise(NotImplementedError)
 
-        inv_freq = 1.0 / (config.rope_theta ** (torch.arange(0, hidden_size_per_head, 2).float() / hidden_size_per_head))
+        inv_freq = 1.0 / (rope_theta ** (torch.arange(0, hidden_size_per_head, 2).float() / hidden_size_per_head))
         output_state_dict[layer_name + '.self_attn.rotary_emb.inv_freq'] = inv_freq
 
     assert config.num_hidden_layers == layer_idx + 1
 
-    # The final layernorm
+    output_state_dict["model.embed_tokens.weight"] = lm["embedding"]["word_embeddings"]["weight"][: config.vocab_size, :]
     output_state_dict["model.norm.weight"] = transformer["final_layernorm.weight"]
     output_state_dict["lm_head.weight"] = lm["lm_head"]["lm_head.weight"]
+
+    # for k, v in output_state_dict.items():
+    #     print(f'dtype of {k}: {v.dtype}')
+
     return output_state_dict
