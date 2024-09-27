@@ -57,6 +57,7 @@ def main():
         attention_dropout=0.0,
         bos_token_id=0,
         eos_token_id=1,
+        pad_token_id=3,
         hidden_act='silu',
         hidden_size=megatron_args.hidden_size,
         intermediate_size=megatron_args.ffn_hidden_size,
@@ -66,11 +67,12 @@ def main():
         num_hidden_layers=megatron_args.num_layers,
         num_key_value_heads=megatron_args.num_key_value_heads,
         rms_norm_eps=megatron_args.layernorm_epsilon,
-        rope_theta=500000,
+        rope_theta=500000.0,
         tie_word_embeddings=False,
         use_cache=True,
         vocab_size=65024,
         torch_dtype='bfloat16',
+        transformers_version = "4.36.1",
     )
 
     num_layers = config.num_hidden_layers
