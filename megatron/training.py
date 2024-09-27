@@ -1292,7 +1292,6 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
 
     return iteration
 
-
 def evaluate(forward_step_func,
              data_iterator,
              model,
@@ -1337,6 +1336,7 @@ def evaluate(forward_step_func,
                 # DeepSpeed uses eval_batch() and already aggregates losses.
                 assert isinstance(model, list) and len(model) == 1
                 loss, logits = model[0].eval_batch(data_iterator, return_logits=True)
+                torch.save(logits.to('cpu'), f'/lustre/fsn1/projects/rech/qgz/uzq54wg/out_logits_1024/logits_rank{logits.get_device()}_{iteration:04d}.pt')
                 loss_dicts = [{'lm loss' : loss}] * get_num_microbatches()
             else:
                 loss_dicts = forward_backward_func(
