@@ -53,6 +53,7 @@ from megatron.model.transformer import ParallelTransformerLayer
 from deepspeed.runtime.config import DeepSpeedConfig
 
 from deepspeed import comm as dist
+import os
 
 try:
     import wandb
@@ -1339,7 +1340,7 @@ def evaluate(forward_step_func,
                 loss, logits = model[0].eval_batch(data_iterator, return_logits=True)
                 global idx_for_saving
                 if logits is not None:
-                    torch.save(logits.to('cpu'), f'/lustre/fsn1/projects/rech/qgz/uzq54wg/out_logits_1024/logits_rank{torch.distributed.get_rank()}_device{logits.get_device()}_iteration{iteration}_global{idx_for_saving}.pt')
+                    torch.save(logits.to('cpu'), os.path.join(args.data_cache_path, f'logits_rank{torch.distributed.get_rank()}_device{logits.get_device()}_iteration{iteration}_global{idx_for_saving}.pt'))
                 else:
                     print(f'Rank: {torch.distributed.get_rank()}; global index: {idx_for_saving:04d} -> logits is None')
                 idx_for_saving += 1
