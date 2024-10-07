@@ -9,11 +9,26 @@ from deepspeed.accelerator import get_accelerator
 from megatron import get_args
 from megatron.core import mpu, tensor_parallel
 
+import functools
 
-_FLOAT_TYPES = (torch.FloatTensor, get_accelerator().FloatTensor)
-_HALF_TYPES = (torch.HalfTensor, get_accelerator().HalfTensor)
-_BF16_TYPES = (torch.BFloat16Tensor, get_accelerator().BFloat16Tensor)
 
+_is_new_deepspeed = isinstance(get_accelerator().FloatTensor, functools.partial)
+if _is_new_deepspeed:
+    _FLOAT_TYPES = [get_accelerator().FloatTensor(0).dtype]
+    _HALF_TYPES = [get_accelerator().HalfTensor(0).dtype]
+    _BF16_TYPES = [get_accelerator().BFloat16Tensor(0).dtype]
+    def is_float(val_typecheck):
+        return val_typecheck.dtype in _FLOAT_TYPES
+    def is_half_or_bf16(val_typecheck):
+        return val_typecheck.dtype in _BF16_TYPES + _HALF_TYPES
+else:
+    _FLOAT_TYPES = (torch.FloatTensor, get_accelerator().FloatTensor)
+    _HALF_TYPES = (torch.HalfTensor, get_accelerator().HalfTensor)
+    _BF16_TYPES = (torch.BFloat16Tensor, get_accelerator().BFloat16Tensor)
+    def is_float(val_typecheck):
+        return isinstance(val_typecheck, _FLOAT_TYPES)
+    def is_half_or_bf16(val_typecheck):
+        return isinstance(val_typecheck, _HALF_TYPES + _BF16_TYPES)
 
 
 def param_is_not_shared(param):
@@ -135,7 +150,7 @@ def fp32_to_float16(val, float16_convertor):
         val_typecheck = val
         if isinstance(val_typecheck, (Parameter, Variable)):
             val_typecheck = val.data
-        if isinstance(val_typecheck, _FLOAT_TYPES):
+        if is_float(val_typecheck):
             val = float16_convertor(val)
         return val
     return conversion_helper(val, half_conversion)
@@ -147,7 +162,7 @@ def float16_to_fp32(val):
         val_typecheck = val
         if isinstance(val_typecheck, (Parameter, Variable)):
             val_typecheck = val.data
-        if isinstance(val_typecheck, (_BF16_TYPES, _HALF_TYPES)):
+        if is_half_or_bf16(val_typecheck):
             val = val.float()
         return val
     return conversion_helper(val, float_conversion)
