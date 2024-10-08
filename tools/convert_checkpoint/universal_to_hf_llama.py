@@ -140,7 +140,7 @@ def main():
     output_config["model_type"] = "llama"
     print(f'Saving config to "{output_config_file}"')
     with open(output_config_file, "w") as f:
-        json.dump(output_config, f)
+        json.dump(output_config, f, indent=2)
 
     def save_state_dict(state_dict, save_directory):
         state_dict_split = split_torch_state_dict_into_shards(state_dict)
