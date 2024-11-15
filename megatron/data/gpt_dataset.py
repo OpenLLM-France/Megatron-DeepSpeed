@@ -350,7 +350,8 @@ def _build_index_mappings(name, data_prefix, documents, sizes,
 
     # Filename of the index mappings.
     desc = "GPT Dataset\n\n"
-    desc += f"Data prefix {os.path.basename(data_prefix)}\n"
+    # desc += f"Data prefix {os.path.basename(data_prefix)}\n"
+    desc += f"Data prefix {data_prefix}\n"
     desc += f"Dataset name {name}\n"
     desc += f"Number of samples {num_samples}\n"
     desc += f"Number of epochs {num_epochs}\n"
