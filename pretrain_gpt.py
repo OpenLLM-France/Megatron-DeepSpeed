@@ -83,7 +83,7 @@ def model_provider(pre_process=True, post_process=True):
                 # partial rotary embeddings, which is better than full rotary
                 # Wang and Komatsuzaki et al
                 # https://github.com/kingoflolz/mesh-transformer-jax/
-                rotary_pos_emb = RotaryEmbedding(rotary_dim)(args.seq_length).to(
+                rotary_pos_emb = RotaryEmbedding(rotary_dim, args.rope_theta)(args.seq_length).to(
                     get_accelerator().current_device_name())
                 args.rotary_pos_emb = rotary_pos_emb
 
