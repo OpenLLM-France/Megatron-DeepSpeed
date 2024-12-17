@@ -68,7 +68,7 @@ def main():
         num_hidden_layers=megatron_args.num_layers,
         num_key_value_heads=megatron_args.num_key_value_heads,
         rms_norm_eps=megatron_args.layernorm_epsilon,
-        rope_theta=megatron_args.rotary_position_embeddings_theta,
+        rope_theta=megatron_args.rope_theta,
         tie_word_embeddings=False,
         use_cache=True,
         vocab_size=65024,
