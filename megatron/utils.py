@@ -142,18 +142,20 @@ def check_adlr_autoresume_termination(iteration, model,
 
 def is_assistant_turn(X, start_assistant, end_assistant):
     n, m = X.shape
-    A = torch.ones_like(X, dtype=torch.float)
+    A = torch.zeros_like(X, dtype=torch.float)
 
-    for i in range(n):
+    for i in range(n): 
         row = X[i]
+        
         train_on_token = False
         for j in range(m):
-            if torch.equal(row[j-len(start_assistant): j], start_assistant):
+            if torch.equal(row[j+1-len(start_assistant): j+1], torch.tensor(start_assistant)):
                 train_on_token = True
-            if not train_on_token:
-                A[i,j] = 0
-            if row[j] == end_assistant:
+            elif row[j] == end_assistant:
                 train_on_token = False
+            if train_on_token:
+                A[i,j] = 1
+
     return A
 
 def get_ltor_masks_and_position_ids(data,
