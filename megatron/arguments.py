@@ -958,6 +958,8 @@ def _add_training_args(parser):
                        help='If set to True, only use the megatron dataset for external trainer ')
     group.add_argument('--pp-partition-method', type=str, default=None,
                     help="Use to override the pipeline stages partitioning method. e.g., 'type:transformer|embedding'")
+    group.add_argument('--mask_user_turn', action='store_true',
+                       help='During instruction only: do you want to train only on assitant answers')
     return parser
 
 

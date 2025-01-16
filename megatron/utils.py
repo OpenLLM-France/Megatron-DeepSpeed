@@ -140,13 +140,30 @@ def check_adlr_autoresume_termination(iteration, model,
         print_rank_0(">>> training terminated. Returning")
         sys.exit(0)
 
+def is_assistant_turn(X, start_assistant, end_assistant):
+    n, m = X.shape
+    A = torch.ones_like(X, dtype=torch.float)
+
+    for i in range(n):
+        row = X[i]
+        train_on_token = False
+        for j in range(m):
+            if torch.equal(row[j-len(start_assistant): j], start_assistant):
+                train_on_token = True
+            if not train_on_token:
+                A[i,j] = 0
+            if row[j] == end_assistant:
+                train_on_token = False
+    return A
 
 def get_ltor_masks_and_position_ids(data,
                                     eod_token,
                                     reset_position_ids,
                                     reset_attention_mask,
                                     eod_mask_loss,
-                                    skip_mask=False):
+                                    skip_mask=False,
+                                    mask_user_turn=False,
+                                    ):
     """Build masks and position id for left to right model."""
 
     # Extract batch size and sequence length.
@@ -164,7 +181,12 @@ def get_ltor_masks_and_position_ids(data,
             (att_mask_batch, seq_length, seq_length))).view(att_mask_batch, 1, seq_length, seq_length)
 
     # Loss mask.
-    loss_mask = torch.ones(data.size(), dtype=torch.float, device=data.device)
+    if mask_user_turn:
+        start_assistant = torch.tensor([265, 9769, 266]).to(data.device)
+        loss_mask = is_assistant_turn(data, start_assistant=start_assistant, end_assistant=267)
+    else:
+        loss_mask = torch.ones(data.size(), dtype=torch.float, device=data.device)
+
     if eod_mask_loss:
         loss_mask[data == eod_token] = 0.0
 
